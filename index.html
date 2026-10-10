@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConvertLab · Unit conversion for engineers</title>
+<meta name="description" content="Fast, precise unit conversion and software engineering tools.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F1830'/%3E%3Cpath d='M8 12h14l-4-4M24 20H10l4 4' stroke='%23FFC21A' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+  /* Apply the saved/system theme before first paint to avoid a flash. */
+  try {
+    var t = localStorage.getItem('cl-theme');
+    if (t !== 'dark' && t !== 'light') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) { document.documentElement.dataset.theme = 'light'; }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #EDF0F4;
+  --surface: #F8F9FB;
+  --ink: #101A33;
+  --muted: #53607C;
+  --line: #C8D0DD;
+  --accent: #2447F5;
+  --on-accent: #FFFFFF;
+  --panel: #0F1830;
+  --panel-2: #1A2547;
+  --panel-line: rgba(233, 238, 251, .18);
+  --panel-text: #E9EEFB;
+  --panel-muted: #9FB0D6;
+  --readout: #FFC21A;
+  --grid: rgba(16, 26, 51, .07);
+  --focus: #2447F5;
+  --danger: #B3261E;
+  --r-lg: 10px;
+  --r-sm: 6px;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0A0F1E;
+  --surface: #111933;
+  --ink: #E8ECF6;
+  --muted: #9AA7C7;
+  --line: #26304F;
+  --accent: #8AA4FF;
+  --on-accent: #0A0F1E;
+  --panel: #16204A;
+  --panel-2: #1F2B5E;
+  --grid: rgba(232, 236, 246, .06);
+  --focus: #8AA4FF;
+  --danger: #FF8A80;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-padding-top: 5rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1rem/1.55 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0; letter-spacing: -.01em; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.skip { position: absolute; left: -999px; top: .5rem; background: var(--ink); color: var(--bg); padding: .5rem .8rem; border-radius: var(--r-sm); z-index: 100; }
+.skip:focus { left: .5rem; }
+.wrap { width: min(1120px, 100% - 2.5rem); margin-inline: auto; }
+
+/* ---------- header ---------- */
+.top {
+  position: sticky; top: 0; z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.top .wrap { display: flex; align-items: center; gap: 1.5rem; min-height: 3.75rem; }
+.brand { display: inline-flex; align-items: center; gap: .55rem; font: 700 1.2rem/1 var(--display); color: var(--ink); text-decoration: none; }
+.mark { display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: var(--r-sm); background: var(--panel); color: var(--readout); font-size: 1rem; }
+.top nav { display: flex; gap: 1.25rem; margin-left: auto; }
+.top nav a { color: var(--muted); text-decoration: none; font-weight: 500; padding: .35rem 0; border-bottom: 2px solid transparent; }
+.top nav a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: var(--r-sm); padding: .4rem .75rem; color: var(--ink); font-size: .9rem; }
+.ghost:hover { border-color: var(--accent); }
+
+/* ---------- hero ---------- */
+.hero {
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0 1.5rem;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent);
+          mask-image: linear-gradient(to bottom, #000 60%, transparent);
+}
+.hero h1 { font-size: clamp(2.4rem, 6.5vw, 4.6rem); font-weight: 700; max-width: 14ch; }
+.lede { margin-top: 1.1rem; max-width: 56ch; color: var(--muted); font-size: 1.1rem; }
+
+/* ---------- blocks ---------- */
+.block { padding: 2.5rem 0 1rem; }
+.block > .wrap > h2 { font-size: clamp(1.6rem, 3.4vw, 2.2rem); }
+.sub { margin-top: .5rem; color: var(--muted); max-width: 60ch; }
+
+/* category tabs */
+.cats { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0 1rem; }
+.cats button {
+  border: 1px solid var(--line); background: var(--surface); border-radius: var(--r-sm);
+  padding: .5rem .95rem; font-weight: 500;
+}
+.cats button:hover { border-color: var(--accent); }
+.cats button[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* workbench */
+.workbench { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 1.25rem; align-items: start; }
+
+.rig { background: var(--panel); color: var(--panel-text); border-radius: var(--r-lg); padding: clamp(1.1rem, 3vw, 1.75rem); }
+.rig :focus-visible { outline-color: var(--readout); }
+.rig-main { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 1rem; align-items: start; }
+.side { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+.side > label, .side > .lbl { color: var(--panel-muted); font-size: .9rem; font-weight: 500; }
+#val {
+  width: 100%; background: transparent; border: 0; border-bottom: 2px solid var(--panel-line);
+  color: var(--panel-text); font: 500 clamp(1.8rem, 4.5vw, 2.8rem)/1.1 var(--mono);
+  padding: 0 0 .35rem; border-radius: 0; min-height: 1.25em;
+}
+#val:focus { border-bottom-color: var(--readout); outline: none; }
+#val:focus-visible { outline: none; border-bottom-color: var(--readout); box-shadow: 0 2px 0 0 var(--readout); }
+.readout {
+  display: block; color: var(--readout); font: 600 clamp(1.8rem, 4.5vw, 2.8rem)/1.1 var(--mono);
+  overflow-wrap: anywhere; min-height: 1.25em; padding-bottom: .35rem; border-bottom: 2px solid transparent;
+}
+.rig select {
+  width: 100%; background: var(--panel-2); color: var(--panel-text);
+  border: 1px solid var(--panel-line); border-radius: var(--r-sm); padding: .6rem .7rem;
+}
+.swap {
+  align-self: center; margin-top: 1.6rem; width: 2.75rem; height: 2.75rem; border-radius: 50%;
+  background: var(--panel-2); color: var(--readout); border: 1px solid var(--panel-line); font-size: 1.15rem;
+}
+.swap:hover { border-color: var(--readout); }
+.copy {
+  align-self: flex-start; background: transparent; border: 1px solid var(--line); color: inherit;
+  border-radius: var(--r-sm); padding: .25rem .65rem; font-size: .85rem;
+}
+.rig .copy { border-color: var(--panel-line); color: var(--panel-text); }
+.copy:hover:not(:disabled) { border-color: var(--accent); }
+.rig .copy:hover:not(:disabled) { border-color: var(--readout); }
+.copy:disabled { opacity: .45; cursor: not-allowed; }
+.note { min-height: 1.5em; margin-top: 1rem; color: var(--readout); font-size: .92rem; }
+.all-h { font: 600 .95rem/1.3 var(--sans); color: var(--panel-muted); margin: .75rem 0 .6rem; }
+.all { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: .5rem; }
+.cell {
+  text-align: left; background: transparent; border: 1px solid var(--panel-line); border-radius: var(--r-sm);
+  padding: .5rem .7rem; color: var(--panel-text); display: flex; flex-direction: column; gap: .1rem; min-width: 0;
+}
+.cell:hover { border-color: var(--panel-muted); }
+.cell[aria-pressed="true"] { border-color: var(--readout); background: var(--panel-2); }
+.cell .cn { font-size: .78rem; color: var(--panel-muted); }
+.cell .cv { font: 500 .95rem/1.3 var(--mono); overflow-wrap: anywhere; }
+
+/* history */
+.history { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1rem 1.1rem; }
+.history header { display: flex; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.history h3 { font-size: 1.1rem; }
+.link-btn { background: none; border: 0; padding: .2rem 0; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font-size: .9rem; }
+.link-btn:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+.history .hint { color: var(--muted); font-size: .85rem; margin: .15rem 0 .75rem; }
+#history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .35rem; }
+#history button {
+  width: 100%; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: .45rem .6rem; display: flex; flex-direction: column;
+}
+#history button:hover { border-color: var(--accent); }
+#history .h1 { font: 500 .9rem/1.35 var(--mono); overflow-wrap: anywhere; }
+#history .h2 { font-size: .78rem; color: var(--muted); }
+.empty { color: var(--muted); font-size: .9rem; padding: .25rem 0; }
+
+/* ---------- tools ---------- */
+.tooltabs { display: flex; gap: 1.25rem; margin: 1.5rem 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tooltabs button {
+  background: none; border: 0; border-bottom: 3px solid transparent; padding: .6rem 0; margin-bottom: -1px;
+  color: var(--muted); font-weight: 500; white-space: nowrap;
+}
+.tooltabs button:hover { color: var(--ink); }
+.tooltabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.toolpanel { padding: 1.5rem 0 .5rem; }
+.toolpanel[hidden] { display: none; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem 1.5rem; max-width: 760px; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .5rem; }
+.f { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
+.f > label, .f > .lbl { font-size: .9rem; font-weight: 500; color: var(--muted); }
+.f input, .f select {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); padding: .6rem .7rem; width: 100%;
+}
+.f input { font-family: var(--mono); }
+.f input:focus-visible, .f select:focus-visible { border-color: var(--focus); }
+.err { color: var(--danger); min-height: 1.5em; margin-top: .75rem; font-size: .92rem; }
+.lines { margin: .25rem 0 0; max-width: 760px; }
+.line { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) auto; gap: .75rem; align-items: baseline; padding: .6rem 0; border-top: 1px solid var(--line); }
+.line:last-child { border-bottom: 1px solid var(--line); }
+.line dt { color: var(--muted); font-size: .92rem; }
+.line dd { margin: 0; font: 500 1rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.line.big dd { font-size: 1.5rem; font-weight: 600; }
+.row-actions { display: flex; gap: .6rem; align-items: end; flex-wrap: wrap; }
+.btn {
+  background: var(--ink); color: var(--bg); border: 1px solid var(--ink); border-radius: var(--r-sm);
+  padding: .6rem 1rem; font-weight: 600;
+}
+.btn:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.subhead { font: 600 1.05rem/1.3 var(--display); margin: 1.75rem 0 .75rem; }
+.tz { color: var(--muted); font-size: .88rem; margin-bottom: .75rem; }
+
+/* ---------- pricing ---------- */
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-top: 1.5rem; max-width: 760px; }
+.plan { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 1.5rem; background: var(--surface); display: flex; flex-direction: column; gap: 1rem; }
+.plan h3 { font-size: 1.3rem; display: flex; align-items: center; gap: .6rem; }
+.price { font: 700 2.2rem/1 var(--display); }
+.price small { font: 400 .95rem var(--sans); opacity: .7; }
+.plan ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+.plan li { padding-left: 1.4rem; position: relative; }
+.plan li::before { content: ""; position: absolute; left: 0; top: .5em; width: .7rem; height: .4rem; border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg) translateY(-30%); }
+.plan .cta { text-align: center; text-decoration: none; border-radius: var(--r-sm); padding: .7rem 1rem; font-weight: 600; border: 1px solid var(--ink); background: transparent; color: var(--ink); }
+.plan .cta:hover { background: var(--ink); color: var(--bg); }
+.plan.pro { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.plan.pro :focus-visible { outline-color: var(--readout); }
+.plan.pro .cta { background: var(--readout); color: #101A33; border-color: var(--readout); }
+.plan.pro .cta:hover { background: #fff; border-color: #fff; }
+.tag { font: 600 .75rem/1 var(--sans); background: var(--readout); color: #101A33; padding: .3rem .5rem; border-radius: 99px; }
+
+footer { margin-top: 3.5rem; border-top: 1px solid var(--line); padding: 1.5rem 0 2.5rem; color: var(--muted); font-size: .88rem; }
+footer p { max-width: 80ch; }
+
+#toast {
+  position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, 1rem);
+  background: var(--ink); color: var(--bg); padding: .6rem 1rem; border-radius: var(--r-sm);
+  opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; z-index: 50; font-size: .92rem;
+}
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+@media (max-width: 860px) {
+  .workbench { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .top .wrap { gap: .75rem; }
+  .top nav { gap: .8rem; font-size: .92rem; }
+  .brand span.t { display: none; }
+  .rig-main { grid-template-columns: 1fr; }
+  .swap { margin: 0; justify-self: center; transform: rotate(90deg); }
+  .line { grid-template-columns: 1fr auto; }
+  .line dt { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#converter">Skip to converter</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="ConvertLab, back to top"><span class="mark" aria-hidden="true">⇄</span><span class="t">ConvertLab</span></a>
+    <nav aria-label="Main">
+      <a href="#converter">Converter</a>
+      <a href="#tools">Field tools</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+    <button id="themeBtn" class="ghost" type="button">Switch to dark</button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <h1>Unit conversion, engineered.</h1>
+      <p class="lede">Length, mass, pressure, energy, temperature and data size with exact factors, plus everyday tools for software engineers.</p>
+    </div>
+  </section>
+
+  <section id="converter" class="block" aria-labelledby="h-conv">
+    <div class="wrap">
+      <h2 id="h-conv">Converter</h2>
+      <p class="sub">Results update as you type. When you pause, the conversion is saved to your history.</p>
+
+      <div id="cats" class="cats" role="tablist" aria-label="Unit category"></div>
+
+      <div class="workbench">
+        <div id="rig" class="rig" role="tabpanel">
+          <div class="rig-main">
+            <div class="side">
+              <label for="val">From</label>
+              <input id="val" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-describedby="note" placeholder="0">
+              <select id="from" aria-label="From unit"></select>
+            </div>
+            <button id="swap" class="swap" type="button" aria-label="Swap units">⇄</button>
+            <div class="side">
+              <span class="lbl" id="toLbl">To</span>
+              <output id="result" class="readout" for="val from to" aria-labelledby="toLbl">—</output>
+              <select id="to" aria-label="To unit"></select>
+              <button id="copyResult" class="copy" type="button" disabled>Copy result</button>
+            </div>
+          </div>
+          <p id="note" class="note" role="status"></p>
+          <h3 class="all-h">Same value in every unit</h3>
+          <div id="all" class="all"></div>
+        </div>
+
+        <aside class="history" aria-labelledby="h-hist">
+          <header>
+            <h3 id="h-hist">History</h3>
+            <button id="clearHist" class="link-btn" type="button">Clear</button>
+          </header>
+          <p class="hint">Last 10 conversions. Select one to bring it back.</p>
+          <ul id="history"></ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <section id="tools" class="block" aria-labelledby="h-tools">
+    <div class="wrap">
+      <h2 id="h-tools">Field tools</h2>
+      <p class="sub">Number bases, transfer times and Unix timestamps for software work.</p>
+
+      <div id="tooltabs" class="tooltabs" role="tablist" aria-label="Software tools">
+        <button role="tab" id="tt-bases" aria-controls="tp-bases" aria-selected="true" tabindex="0" type="button">Number bases</button>
+        <button role="tab" id="tt-transfer" aria-controls="tp-transfer" aria-selected="false" tabindex="-1" type="button">Transfer time</button>
+        <button role="tab" id="tt-time" aria-controls="tp-time" aria-selected="false" tabindex="-1" type="button">Unix timestamp</button>
+      </div>
+
+      <!-- Number bases -->
+      <div id="tp-bases" class="toolpanel" role="tabpanel" aria-labelledby="tt-bases">
+        <div class="grid2">
+          <div class="f">
+            <label for="baseVal">Value</label>
+            <input id="baseVal" type="text" value="255" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="f">
+            <label for="baseFrom">Input base</label>
+            <select id="baseFrom">
+              <option value="10" selected>Decimal (10)</option>
+              <option value="2">Binary (2)</option>
+              <option value="8">Octal (8)</option>
+              <option value="16">Hexadecimal (16)</option>
+              <option value="36">Base 36</option>
+            </select>
+          </div>
+        </div>
+        <p id="baseErr" class="err" role="status"></p>
+        <dl id="baseOut" class="lines"></dl>
+      </div>
+
+      <!-- Transfer time -->
+      <div id="tp-transfer" class="toolpanel" role="tabpanel" aria-labelledby="tt-transfer" hidden>
+        <div class="grid2">
+          <div class="f">
+            <label for="szVal">File size</label>
+            <div class="pair">
+              <input id="szVal" type="text" inputmode="decimal" value="4.7" autocomplete="off">
+              <select id="szUnit" aria-label="File size unit"></select>
+            </div>
+          </div>
+          <div class="f">
+            <label for="spVal">Connection speed</label>
+            <div class="pair">
+              <input id="spVal" type="text" inputmode="decimal" value="100" autocomplete="off">
+              <select id="spUnit" aria-label="Speed unit"></select>
+            </div>
+          </div>
+        </div>
+        <p id="trErr" class="err" role="status"></p>
+        <dl id="trOut" class="lines"></dl>
+      </div>
+
+      <!-- Unix timestamp -->
+      <div id="tp-time" class="toolpanel" role="tabpanel" aria-labelledby="tt-time" hidden>
+        <div class="row-actions">
+          <div class="f" style="min-width:220px;flex:1;max-width:340px">
+            <label for="tsIn">Timestamp</label>
+            <input id="tsIn" type="text" inputmode="numeric" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="f" style="width:190px">
+            <label for="tsUnit">Unit</label>
+            <select id="tsUnit">
+              <option value="auto" selected>Detect automatically</option>
+              <option value="s">Seconds</option>
+              <option value="ms">Milliseconds</option>
+            </select>
+          </div>
+          <button id="tsNow" class="btn" type="button">Use current time</button>
+        </div>
+        <p id="tsErr" class="err" role="status"></p>
+        <dl id="tsOut" class="lines"></dl>
+
+        <h3 class="subhead">Date to timestamp</h3>
+        <p id="tzNote" class="tz"></p>
+        <div class="f" style="max-width:300px">
+          <label for="dtIn">Date and time</label>
+          <input id="dtIn" type="datetime-local" step="1">
+        </div>
+        <p id="dtErr" class="err" role="status"></p>
+        <dl id="dtOut" class="lines"></dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" class="block" aria-labelledby="h-price">
+    <div class="wrap">
+      <h2 id="h-price">Simple pricing</h2>
+      <p class="sub">Start free. Upgrade when your work needs more.</p>
+      <div class="plans">
+        <article class="plan">
+          <h3>Student</h3>
+          <p class="price">$0 <small>/ month</small></p>
+          <ul>
+            <li>All 6 unit categories</li>
+            <li>3 software tools</li>
+            <li>Last 10 history</li>
+            <li>Works on any device</li>
+          </ul>
+          <a class="cta" href="#converter" id="startBtn">Get started</a>
+        </article>
+        <article class="plan pro">
+          <h3>Pro <span class="tag">Most popular</span></h3>
+          <p class="price">$4 <small>/ month</small></p>
+          <ul>
+            <li>Everything in Student</li>
+            <li>Unlimited history and export</li>
+            <li>Custom units and precision</li>
+            <li>Priority support</li>
+          </ul>
+          <a class="cta" href="#pricing" id="proBtn" role="button">Go Pro</a>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>© 2026 ConvertLab. Conversion factors based on SI and NIST definitions. KB/MB/GB are decimal (SI); KiB/MiB/GiB are binary (IEC).</p>
+  </div>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:1rem;text-align:center">ConvertLab needs JavaScript to run the converter.</p></noscript>
+
+<script>
+(() => {
+'use strict';
+
+/* =========================================================
+   Helpers
+   ========================================================= */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode / quota */ } }
+};
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); } catch { /* ignore */ }
+    ta.remove();
+  }
+  toast('Copied');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-copy]');
+  if (b && !b.disabled) copyText(b.dataset.copy);
+});
+
+/* Roving-tabindex tablist (arrow keys, Home, End). */
+function tablist(list, onSelect) {
+  const tabs = () => $$('[role="tab"]', list);
+  list.addEventListener('click', e => {
+    const t = e.target.closest('[role="tab"]');
+    if (t) onSelect(t);
+  });
+  list.addEventListener('keydown', e => {
+    const all = tabs(), i = all.indexOf(document.activeElement);
+    if (i < 0) return;
+    let n = null;
+    if (e.key === 'ArrowRight') n = (i + 1) % all.length;
+    else if (e.key === 'ArrowLeft') n = (i - 1 + all.length) % all.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = all.length - 1;
+    if (n !== null) { e.preventDefault(); all[n].focus(); onSelect(all[n]); }
+  });
+}
+
+/* Parse a user-typed number. Accepts "1,5" (decimal comma), "1,234.5", "1.234,5", "1e3". */
+function parseNum(raw) {
+  let s = String(raw).trim().replace(/[\s_']/g, '');
+  if (!s) return null;
+  const c = s.lastIndexOf(','), d = s.lastIndexOf('.');
+  if (c >= 0 && d >= 0) s = c > d ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  else if (c >= 0) s = s.replace(/,/g, c === s.indexOf(',') ? '.' : '');
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i.test(s)) return NaN;
+  return Number(s);
+}
+
+/* Format a number to 10 significant digits without float noise (0.1+0.2 -> 0.3). */
+function fmt(n) {
+  if (!Number.isFinite(n)) return '—';
+  if (n === 0) return '0';
+  const a = Math.abs(n);
+  if (a >= 1e15 || a < 1e-6) return n.toExponential(6).replace(/\.?0+e/, 'e').replace('e+', 'e');
+  return Number(n.toPrecision(10)).toLocaleString('en-US', { maximumFractionDigits: 20, useGrouping: true });
+}
+/* Plain (ungrouped) version for copying. */
+function plain(n) {
+  if (!Number.isFinite(n)) return '';
+  if (n === 0) return '0';
+  return String(Number(n.toPrecision(12)));
+}
+
+/* =========================================================
+   Units
+   ========================================================= */
+const U = (sym, name, f) => ({ sym, name, f });
+const CATS = {
+  length: { label: 'Length', def: ['m', 'ft'], units: [
+    U('mm', 'Millimeter', 1e-3), U('cm', 'Centimeter', 1e-2), U('m', 'Meter', 1), U('km', 'Kilometer', 1e3),
+    U('in', 'Inch', 0.0254), U('ft', 'Foot', 0.3048), U('yd', 'Yard', 0.9144), U('mi', 'Mile', 1609.344),
+    U('nmi', 'Nautical mile', 1852) ] },
+  mass: { label: 'Mass', def: ['kg', 'lb'], units: [
+    U('mg', 'Milligram', 1e-6), U('g', 'Gram', 1e-3), U('kg', 'Kilogram', 1), U('t', 'Metric ton', 1000),
+    U('oz', 'Ounce', 0.028349523125), U('lb', 'Pound', 0.45359237), U('st', 'Stone', 6.35029318) ] },
+  pressure: { label: 'Pressure', def: ['bar', 'psi'], units: [
+    U('Pa', 'Pascal', 1), U('kPa', 'Kilopascal', 1e3), U('MPa', 'Megapascal', 1e6), U('bar', 'Bar', 1e5),
+    U('atm', 'Atmosphere', 101325), U('psi', 'Pound per sq inch', 6894.757293168),
+    U('mmHg', 'Millimeter of mercury', 133.322387415), U('Torr', 'Torr', 101325 / 760) ] },
+  energy: { label: 'Energy', def: ['kcal', 'kJ'], units: [
+    U('J', 'Joule', 1), U('kJ', 'Kilojoule', 1e3), U('cal', 'Calorie', 4.184), U('kcal', 'Kilocalorie', 4184),
+    U('Wh', 'Watt-hour', 3600), U('kWh', 'Kilowatt-hour', 3.6e6), U('BTU', 'British thermal unit', 1055.05585262),
+    U('eV', 'Electronvolt', 1.602176634e-19), U('ft·lbf', 'Foot-pound force', 1.3558179483314004) ] },
+  temperature: { label: 'Temperature', def: ['°C', '°F'], temp: true, units: [
+    U('°C', 'Celsius'), U('°F', 'Fahrenheit'), U('K', 'Kelvin'), U('°R', 'Rankine') ] },
+  data: { label: 'Data size', def: ['GB', 'GiB'], units: [
+    U('bit', 'Bit', 0.125), U('B', 'Byte', 1),
+    U('KB', 'Kilobyte', 1e3), U('MB', 'Megabyte', 1e6), U('GB', 'Gigabyte', 1e9), U('TB', 'Terabyte', 1e12),
+    U('KiB', 'Kibibyte', 1024), U('MiB', 'Mebibyte', 1024 ** 2), U('GiB', 'Gibibyte', 1024 ** 3), U('TiB', 'Tebibyte', 1024 ** 4) ] }
+};
+
+const TEMP = {   /* every scale <-> kelvin */
+  '°C': { to: v => v + 273.15,                 from: k => k - 273.15 },
+  '°F': { to: v => (v - 32) * 5 / 9 + 273.15,  from: k => (k - 273.15) * 9 / 5 + 32 },
+  'K':  { to: v => v,                          from: k => k },
+  '°R': { to: v => v * 5 / 9,                  from: k => k * 9 / 5 }
+};
+
+function unitOf(cat, sym) { return CATS[cat].units.find(u => u.sym === sym); }
+
+function convert(cat, v, from, to) {
+  if (CATS[cat].temp) return TEMP[to].from(TEMP[from].to(v));
+  return v * unitOf(cat, from).f / unitOf(cat, to).f;
+}
+
+/* =========================================================
+   Converter state
+   ========================================================= */
+const state = Object.assign({ cat: 'length', from: 'm', to: 'ft', value: '1' }, store.get('cl-state', {}));
+if (!CATS[state.cat]) Object.assign(state, { cat: 'length', from: 'm', to: 'ft' });
+if (!unitOf(state.cat, state.from) || !unitOf(state.cat, state.to)) [state.from, state.to] = CATS[state.cat].def;
+state.value = String(state.value ?? '');
+
+let history = store.get('cl-history', []);
+history = Array.isArray(history)
+  ? history.filter(h => h && CATS[h.cat] && unitOf(h.cat, h.from) && unitOf(h.cat, h.to)).slice(0, 10)
+  : [];
+
+const els = {
+  cats: $('#cats'), rig: $('#rig'), val: $('#val'), from: $('#from'), to: $('#to'), swap: $('#swap'),
+  result: $('#result'), copy: $('#copyResult'), note: $('#note'), all: $('#all'),
+  hist: $('#history'), clear: $('#clearHist')
+};
+
+/* category tabs */
+Object.entries(CATS).forEach(([k, c]) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.id = 'cat-' + k; b.dataset.cat = k; b.textContent = c.label;
+  b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', 'rig');
+  els.cats.append(b);
+});
+tablist(els.cats, t => setCat(t.dataset.cat));
+
+function fillSelect(sel, cat, value) {
+  sel.replaceChildren(...CATS[cat].units.map(u => {
+    const o = document.createElement('option');
+    o.value = u.sym; o.textContent = `${u.name} (${u.sym})`;
+    return o;
+  }));
+  sel.value = value;
+}
+
+function buildCategory() {
+  fillSelect(els.from, state.cat, state.from);
+  fillSelect(els.to, state.cat, state.to);
+  els.all.replaceChildren(...CATS[state.cat].units.map(u => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'cell'; b.dataset.sym = u.sym;
+    b.innerHTML = '<span class="cn"></span><span class="cv"></span>';
+    $('.cn', b).textContent = `${u.name} (${u.sym})`;
+    return b;
+  }));
+  $$('[role="tab"]', els.cats).forEach(t => {
+    const on = t.dataset.cat === state.cat;
+    t.setAttribute('aria-selected', on);
+    t.tabIndex = on ? 0 : -1;
+  });
+  els.rig.setAttribute('aria-labelledby', 'cat-' + state.cat);
+}
+
+function setCat(cat) {
+  if (cat === state.cat) return;
+  state.cat = cat;
+  [state.from, state.to] = CATS[cat].def;
+  buildCategory();
+  update();
+  scheduleRecord();
+}
+
+els.all.addEventListener('click', e => {
+  const b = e.target.closest('.cell');
+  if (!b) return;
+  state.to = b.dataset.sym;
+  els.to.value = state.to;
+  update();
+  scheduleRecord();
+});
+
+function update() {
+  const v = parseNum(state.value);
+  const valid = v !== null && !Number.isNaN(v);
+  let note = '';
+  let main = '—', rawMain = '';
+
+  if (v !== null && Number.isNaN(v)) note = 'Enter a number, like 12.5, 1,5 or 1e3.';
+
+  if (valid) {
+    const r = convert(state.cat, v, state.from, state.to);
+    if (Number.isFinite(r)) { main = fmt(r); rawMain = plain(r); }
+    else { main = 'Out of range'; note = 'That value is too large to convert.'; }
+    if (CATS[state.cat].temp && TEMP[state.from].to(v) < -1e-9) note = 'This is below absolute zero, so no real temperature matches it.';
+  }
+
+  els.result.textContent = main;
+  els.copy.disabled = !rawMain;
+  els.copy.dataset.copy = rawMain;
+  els.note.textContent = note;
+
+  $$('.cell', els.all).forEach(b => {
+    const sym = b.dataset.sym;
+    let txt = '—';
+    if (valid) {
+      const r = convert(state.cat, v, state.from, sym);
+      if (Number.isFinite(r)) txt = fmt(r);
+    }
+    $('.cv', b).textContent = txt;
+    b.setAttribute('aria-pressed', sym === state.to);
+  });
+
+  store.set('cl-state', state);
+}
+
+/* inputs */
+els.val.addEventListener('input', () => { state.value = els.val.value; update(); scheduleRecord(); });
+els.from.addEventListener('change', () => { state.from = els.from.value; update(); scheduleRecord(); });
+els.to.addEventListener('change', () => { state.to = els.to.value; update(); scheduleRecord(); });
+els.swap.addEventListener('click', () => {
+  [state.from, state.to] = [state.to, state.from];
+  els.from.value = state.from; els.to.value = state.to;
+  update(); scheduleRecord();
+});
+
+/* =========================================================
+   History (saved once the user pauses, never per keystroke)
+   ========================================================= */
+let recTimer;
+function scheduleRecord() { clearTimeout(recTimer); recTimer = setTimeout(record, 900); }
+
+function record() {
+  const v = parseNum(state.value);
+  if (v === null || Number.isNaN(v) || state.from === state.to) return;
+  const r = convert(state.cat, v, state.from, state.to);
+  if (!Number.isFinite(r)) return;
+  const entry = { cat: state.cat, from: state.from, to: state.to, value: state.value.trim(), result: fmt(r) };
+  history = [entry, ...history.filter(h =>
+    !(h.cat === entry.cat && h.from === entry.from && h.to === entry.to && h.value === entry.value))].slice(0, 10);
+  store.set('cl-history', history);
+  renderHistory();
+}
+
+function renderHistory() {
+  els.clear.disabled = history.length === 0;
+  if (!history.length) {
+    els.hist.innerHTML = '<li class="empty">Nothing yet. Convert something and pause for a moment.</li>';
+    return;
+  }
+  els.hist.replaceChildren(...history.map((h, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.i = i;
+    b.innerHTML = '<span class="h1"></span><span class="h2"></span>';
+    $('.h1', b).textContent = `${h.value} ${h.from} = ${h.result} ${h.to}`;
+    $('.h2', b).textContent = CATS[h.cat].label;
+    li.append(b);
+    return li;
+  }));
+}
+els.hist.addEventListener('click', e => {
+  const b = e.target.closest('button[data-i]');
+  if (!b) return;
+  const h = history[+b.dataset.i];
+  if (!h) return;
+  clearTimeout(recTimer);
+  const catChanged = h.cat !== state.cat;
+  Object.assign(state, { cat: h.cat, from: h.from, to: h.to, value: h.value });
+  els.val.value = state.value;
+  if (catChanged) buildCategory(); else { els.from.value = state.from; els.to.value = state.to; }
+  update();
+});
+els.clear.addEventListener('click', () => {
+  history = []; store.set('cl-history', history); renderHistory(); toast('History cleared');
+});
+
+/* =========================================================
+   Tool: number bases
+   ========================================================= */
+const DIGITS = '0123456789abcdefghijklmnopqrstuvwxyz';
+
+function lines(dl, rows) {
+  dl.replaceChildren(...rows.map(([label, text, raw, big]) => {
+    const d = document.createElement('div');
+    d.className = 'line' + (big ? ' big' : '');
+    const dt = document.createElement('dt'); dt.textContent = label;
+    const dd = document.createElement('dd'); dd.textContent = text;
+    d.append(dt, dd);
+    if (raw != null && raw !== '') {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'copy'; b.dataset.copy = raw; b.textContent = 'Copy';
+      b.setAttribute('aria-label', 'Copy ' + label);
+      d.append(b);
+    }
+    return d;
+  }));
+}
+
+function parseBig(str, base) {
+  let s = str.trim().replace(/[_\s]/g, '').toLowerCase();
+  if (!s) return { empty: true };
+  if (s.length > 1024) return { error: 'That value is too long (limit 1,024 digits).' };
+  let neg = false;
+  if (s[0] === '-' || s[0] === '+') { neg = s[0] === '-'; s = s.slice(1); }
+  const prefix = { 16: '0x', 2: '0b', 8: '0o' }[base];
+  if (prefix && s.startsWith(prefix)) s = s.slice(2);
+  if (!s) return { error: 'Enter at least one digit.' };
+  const B = BigInt(base);
+  let r = 0n;
+  for (const ch of s) {
+    const d = DIGITS.indexOf(ch);
+    if (d < 0 || d >= base) return { error: `"${ch}" is not a valid base-${base} digit.` };
+    r = r * B + BigInt(d);
+  }
+  return { value: neg ? -r : r };
+}
+
+function updateBases() {
+  const res = parseBig($('#baseVal').value, +$('#baseFrom').value);
+  const err = $('#baseErr'), out = $('#baseOut');
+  if (res.empty) { err.textContent = ''; out.replaceChildren(); return; }
+  if (res.error) { err.textContent = res.error; out.replaceChildren(); return; }
+  err.textContent = '';
+  const n = res.value;
+  const bin = n.toString(2);
+  const sign = n < 0n ? '-' : '';
+  const binDigits = bin.replace('-', '');
+  const grouped = sign + binDigits.padStart(Math.ceil(binDigits.length / 4) * 4, '0').replace(/(.{4})(?=.)/g, '$1 ');
+  lines(out, [
+    ['Binary (2)',       grouped,                     bin],
+    ['Octal (8)',        n.toString(8),               n.toString(8)],
+    ['Decimal (10)',     n.toString(10),              n.toString(10)],
+    ['Hexadecimal (16)', n.toString(16).toUpperCase(), n.toString(16).toUpperCase()]
+  ]);
+}
+$('#baseVal').addEventListener('input', updateBases);
+$('#baseFrom').addEventListener('change', updateBases);
+
+/* =========================================================
+   Tool: transfer time
+   ========================================================= */
+const SPEEDS = [
+  ['kbps', 'Kilobit/s', 1e3], ['Mbps', 'Megabit/s', 1e6], ['Gbps', 'Gigabit/s', 1e9],
+  ['KB/s', 'Kilobyte/s', 8e3], ['MB/s', 'Megabyte/s', 8e6], ['GB/s', 'Gigabyte/s', 8e9],
+  ['MiB/s', 'Mebibyte/s', 8 * 1024 ** 2]
+];
+const sig3 = n => String(Number(n.toPrecision(3)));
+
+function fmtDuration(sec) {
+  if (sec < 1) return `${sig3(sec * 1000)} ms`;
+  if (sec < 60) return `${sig3(sec)} s`;
+  let t = Math.round(sec);
+  const d = Math.floor(t / 86400); t -= d * 86400;
+  const h = Math.floor(t / 3600);  t -= h * 3600;
+  const m = Math.floor(t / 60);
+  const s = t - m * 60;
+  const parts = [];
+  if (d) parts.push(`${d.toLocaleString('en-US')} d`);
+  if (h) parts.push(`${h} h`);
+  if (m) parts.push(`${m} min`);
+  if (s) parts.push(`${s} s`);
+  return parts.join(' ') || '0 s';
+}
+
+function updateTransfer() {
+  const size = parseNum($('#szVal').value), speed = parseNum($('#spVal').value);
+  const err = $('#trErr'), out = $('#trOut');
+  if (size === null || speed === null) { err.textContent = ''; out.replaceChildren(); return; }
+  if (Number.isNaN(size) || Number.isNaN(speed) || size <= 0 || speed <= 0) {
+    err.textContent = 'Enter a size and a speed greater than zero.'; out.replaceChildren(); return;
+  }
+  const bytes = size * unitOf('data', $('#szUnit').value).f;
+  const bps = speed * SPEEDS.find(s => s[0] === $('#spUnit').value)[2];
+  const bits = bytes * 8;
+  const sec = bits / bps;
+  if (!Number.isFinite(sec)) { err.textContent = 'Those values are too large.'; out.replaceChildren(); return; }
+  err.textContent = '';
+  lines(out, [
+    ['Transfer time', fmtDuration(sec), fmtDuration(sec), true],
+    ['Speed in MB/s', `${fmt(bps / 8e6)} MB/s`, plain(bps / 8e6)],
+    ['Size in bits',  `${fmt(bits)} bit`,       plain(bits)],
+    ['Size in bytes', `${fmt(bytes)} B`,        plain(bytes)]
+  ]);
+}
+
+(function initTransfer() {
+  const sz = $('#szUnit'), sp = $('#spUnit');
+  sz.replaceChildren(...CATS.data.units.filter(u => u.sym !== 'bit').map(u => {
+    const o = document.createElement('option'); o.value = u.sym; o.textContent = u.sym; return o;
+  }));
+  sz.value = 'GB';
+  sp.replaceChildren(...SPEEDS.map(s => {
+    const o = document.createElement('option'); o.value = s[0]; o.textContent = s[0]; return o;
+  }));
+  sp.value = 'Mbps';
+  ['#szVal', '#spVal'].forEach(id => $(id).addEventListener('input', updateTransfer));
+  ['#szUnit', '#spUnit'].forEach(id => $(id).addEventListener('change', updateTransfer));
+})();
+
+/* =========================================================
+   Tool: Unix timestamp
+   ========================================================= */
+const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'local time'; } catch { return 'local time'; } })();
+$('#tzNote').textContent = `Read in your time zone: ${TZ}.`;
+
+function relative(ms) {
+  const diff = Math.round((ms - Date.now()) / 1000), abs = Math.abs(diff);
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+  const steps = [['year', 31557600], ['month', 2629800], ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1]];
+  for (const [unit, secs] of steps) if (abs >= secs || unit === 'second') return rtf.format(Math.trunc(diff / secs), unit);
+}
+const pad = n => String(n).padStart(2, '0');
+function toLocalInput(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function updateTs() {
+  const raw = $('#tsIn').value.trim(), mode = $('#tsUnit').value;
+  const err = $('#tsErr'), out = $('#tsOut');
+  if (!raw) { err.textContent = ''; out.replaceChildren(); return; }
+  const n = Number(raw.replace(/[_\s,]/g, ''));
+  if (!Number.isFinite(n)) { err.textContent = 'Enter a Unix timestamp, like 1760000000.'; out.replaceChildren(); return; }
+  const asMs = mode === 'ms' || (mode === 'auto' && Math.abs(n) >= 1e11);
+  const ms = asMs ? n : n * 1000;
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) { err.textContent = 'That timestamp is outside the range of dates JavaScript supports.'; out.replaceChildren(); return; }
+  err.textContent = '';
+  const local = d.toLocaleString(undefined, { dateStyle: 'full', timeStyle: 'long' });
+  lines(out, [
+    ['UTC',        d.toISOString(), d.toISOString()],
+    ['Local time', local,           local],
+    ['Relative',   relative(ms)],
+    ['Read as',    asMs ? 'milliseconds' : 'seconds']
+  ]);
+}
+
+function updateDt() {
+  const v = $('#dtIn').value, err = $('#dtErr'), out = $('#dtOut');
+  if (!v) { err.textContent = ''; out.replaceChildren(); return; }
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) { err.textContent = 'Enter a valid date and time.'; out.replaceChildren(); return; }
+  err.textContent = '';
+  lines(out, [
+    ['Seconds',      String(Math.floor(d.getTime() / 1000)), String(Math.floor(d.getTime() / 1000))],
+    ['Milliseconds', String(d.getTime()),                    String(d.getTime())],
+    ['UTC',          d.toISOString(),                         d.toISOString()]
+  ]);
+}
+
+function setNow() {
+  const now = new Date();
+  $('#tsIn').value = String(Math.floor(now.getTime() / 1000));
+  $('#dtIn').value = toLocalInput(now);
+  updateTs(); updateDt();
+}
+$('#tsIn').addEventListener('input', updateTs);
+$('#tsUnit').addEventListener('change', updateTs);
+$('#dtIn').addEventListener('input', updateDt);
+$('#tsNow').addEventListener('click', setNow);
+
+/* =========================================================
+   Tool tabs
+   ========================================================= */
+tablist($('#tooltabs'), t => {
+  $$('#tooltabs [role="tab"]').forEach(x => {
+    const on = x === t;
+    x.setAttribute('aria-selected', on);
+    x.tabIndex = on ? 0 : -1;
+    $('#' + x.getAttribute('aria-controls')).hidden = !on;
+  });
+});
+
+/* =========================================================
+   Theme
+   ========================================================= */
+const themeBtn = $('#themeBtn');
+function applyTheme(t, save) {
+  document.documentElement.dataset.theme = t;
+  themeBtn.textContent = t === 'dark' ? 'Switch to light' : 'Switch to dark';
+  if (save) { try { localStorage.setItem('cl-theme', t); } catch { /* ignore */ } }
+}
+applyTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light', false);
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true);
+});
+try {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    if (!localStorage.getItem('cl-theme')) applyTheme(e.matches ? 'dark' : 'light', false);
+  });
+} catch { /* older browsers */ }
+
+/* =========================================================
+   Pricing buttons
+   ========================================================= */
+$('#startBtn').addEventListener('click', () => setTimeout(() => els.val.focus({ preventScroll: true }), 400));
+$('#proBtn').addEventListener('click', e => { e.preventDefault(); toast('Pro is not open yet. Nothing has been charged.'); });
+$('#proBtn').addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); toast('Pro is not open yet. Nothing has been charged.'); } });
+
+/* =========================================================
+   Init
+   ========================================================= */
+buildCategory();
+els.val.value = state.value;
+update();
+renderHistory();
+updateBases();
+updateTransfer();
+setNow();
+})();
+</script>
+</body>
+</html>
